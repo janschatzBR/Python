@@ -102,7 +102,7 @@ def process_excel(uploaded_file):
 st.set_page_config(page_title="Excel Contact Filter", page_icon="📊")
 
 st.title("Excel Contact Filter")
-st.write("Upload your spreadsheet. The system will extract specific columns in a **fixed order** (starting with National Store), but **only if** one of those columns contains **red text**. Original text colors will be preserved.")
+st.write("Upload your **McOpCo Alignment - All Divisions** spreadsheet. The system will extract specific columns from **Field Contacts**, but **only if** one of those columns contains **red text**.")
 
 # File uploader widget
 uploaded_file = st.file_uploader("Upload an Excel file (.xlsx)", type=["xlsx"])
