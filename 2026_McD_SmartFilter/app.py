@@ -4,8 +4,11 @@ from openpyxl.styles import Font, PatternFill
 from io import BytesIO
 from copy import copy
 
-def get_data_dictionary(ws, target_headers):
-    """Helper function to extract sheet data into a dictionary keyed by National Store #"""
+def get_data_dictionary(ws, target_headers, check_format=False):
+    """
+    Helper function to extract sheet data into a dictionary keyed by National Store #.
+    If check_format=True, it also evaluates the font color to flag red text.
+    """
     normalized_targets = {" ".join(h.lower().split()): h for h in target_headers}
     found_columns_map = {}
     
@@ -18,30 +21,54 @@ def get_data_dictionary(ws, target_headers):
         if cell_val:
             normalized_cell_text = " ".join(str(cell_val).lower().split())
             if normalized_cell_text in normalized_targets:
-                # Store using the EXACT target header case to match our valid_columns logic later
                 found_columns_map[normalized_targets[normalized_cell_text]] = col_idx
                 
     if "National Store #" not in found_columns_map:
-        return None, found_columns_map
+        return (None, found_columns_map, None) if check_format else (None, found_columns_map)
         
     data_dict = {}
-    # Extract row values
-    for row in ws.iter_rows(min_row=3, values_only=True):
+    red_dict = {} if check_format else None
+    
+    # Extract row values. If checking format, we must inspect cell objects instead of just values.
+    for row in ws.iter_rows(min_row=3, values_only=not check_format):
         nsn_col_index = found_columns_map["National Store #"] - 1 # 0-indexed for tuple
-        if nsn_col_index >= len(row) or row[nsn_col_index] is None:
+        
+        # Determine cell value depending on values_only flag
+        nsn_val = row[nsn_col_index] if not check_format else row[nsn_col_index].value
+        
+        if nsn_val is None:
             continue
             
-        nsn = str(row[nsn_col_index]).strip()
+        nsn = str(nsn_val).strip()
         row_data = {}
+        row_reds = set()
+        
         for header in target_headers:
             if header in found_columns_map:
                 val_idx = found_columns_map[header] - 1
-                row_data[header] = str(row[val_idx]).strip() if val_idx < len(row) and row[val_idx] is not None else "N/A"
+                if val_idx < len(row):
+                    if check_format:
+                        cell = row[val_idx]
+                        cell_val = cell.value
+                        # Check if the font is red
+                        if cell.font and cell.font.color and cell.font.color.type == 'rgb':
+                            if cell.font.color.rgb in ['FF0000', 'FFFF0000']:
+                                row_reds.add(header)
+                    else:
+                        cell_val = row[val_idx]
+                        
+                    row_data[header] = str(cell_val).strip() if cell_val is not None else "N/A"
+                else:
+                    row_data[header] = "N/A"
             else:
                 row_data[header] = "N/A"
                 
         data_dict[nsn] = row_data
-        
+        if check_format:
+            red_dict[nsn] = row_reds
+            
+    if check_format:
+        return data_dict, found_columns_map, red_dict
     return data_dict, found_columns_map
 
 def process_excel(file_prev, file_curr):
@@ -63,8 +90,13 @@ def process_excel(file_prev, file_curr):
     ]
     
     # 1. Extract Data Dictionaries for Comparison
-    prev_data, _ = get_data_dictionary(ws_prev, target_headers)
-    curr_data, curr_cols_map = get_data_dictionary(ws_curr, target_headers)
+    # We only need to check formatting on the CURRENT file
+    prev_data, _ = get_data_dictionary(ws_prev, target_headers, check_format=False)
+    
+    curr_result = get_data_dictionary(ws_curr, target_headers, check_format=True)
+    curr_data = curr_result[0]
+    curr_cols_map = curr_result[1]
+    curr_red_dict = curr_result[2]
     
     if prev_data is None or curr_data is None:
         st.error("Error: 'National Store #' column not found in one or both files.")
@@ -85,18 +117,23 @@ def process_excel(file_prev, file_curr):
         pc = curr_data[nsn].get("PC Ops Name", "N/A")
         changes_list.append(["ADD", nsn, pc, "Store", "N/A", "New Store", "Yes"])
         
-    # Check Changed
+    # Check Changed (Value differences AND Red Text flags)
     for nsn in common_nsns:
         for col in target_headers:
-            if col in ["National Store #", "District", "PC Ops Name"]:
-                continue # Skip primary keys / identifiers for role change flags
+            if col == "National Store #":
+                continue # Skip primary key identifier
                 
-            old_val = prev_data[nsn].get(col)
-            new_val = curr_data[nsn].get(col)
+            old_val = prev_data[nsn].get(col, "N/A")
+            new_val = curr_data[nsn].get(col, "N/A")
+            is_red = col in curr_red_dict.get(nsn, set())
             
-            if old_val != new_val:
+            # Trigger change log if the value changed OR if the cell is formatted red
+            if old_val != new_val or is_red:
                 pc = curr_data[nsn].get("PC Ops Name", "N/A")
-                action = "Yes" # Default action flag, can be adjusted based on your business logic
+                
+                # Assign a distinct action string if it's purely a formatting flag
+                action = "Yes" if old_val != new_val else "Yes (Red Text)"
+                
                 changes_list.append(["CHANGE", nsn, pc, col, old_val, new_val, action])
 
     # --- CREATE NEW WORKBOOK ---
@@ -115,10 +152,10 @@ def process_excel(file_prev, file_curr):
     ws_summary.cell(row=3, column=1).font = bold_font
     ws_summary.append([f"✅ {len(added_nsns)} New Stores Added"])
     ws_summary.append([f"⚠️ {len(removed_nsns)} Store Removed"])
-    ws_summary.append([f"🔄 {len([c for c in changes_list if c[0] == 'CHANGE'])} Role Changes"])
+    ws_summary.append([f"🔄 {len([c for c in changes_list if c[0] == 'CHANGE'])} Changes Detected"])
     ws_summary.append([])
     
-    # --- MOVED: STORE CHANGES (Added/Removed) ---
+    # --- STORE CHANGES (Added/Removed) ---
     ws_summary.append(["Store Changes"])
     ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
     
@@ -137,15 +174,14 @@ def process_excel(file_prev, file_curr):
 
     ws_summary.append([])
     
-    # --- MOVED: ACTION REQUIRED CHANGES ---
+    # --- ACTION REQUIRED CHANGES ---
     ws_summary.append(["Action Required Changes"])
     ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
     
-    # Header Updated to "PC Ops Name"
-    summary_headers = ["Change Type", "NSN", "PC Ops Name", "Role", "Previous", "New", "Action"]
+    # Headers updated to match new structure
+    summary_headers = ["Change Type", "NSN", "PC Ops Name", "Store / Role", "Previous", "New", "Action"]
     ws_summary.append(summary_headers)
     
-    # Style the headers dynamically based on where they landed
     header_row_idx = ws_summary.max_row
     for col_num in range(1, len(summary_headers) + 1):
         ws_summary.cell(row=header_row_idx, column=col_num).font = bold_font
@@ -157,23 +193,20 @@ def process_excel(file_prev, file_curr):
     # TAB 2: CURRENT DATASET CHANGES (Original Red-Text Logic)
     ws_changes = new_wb.create_sheet("Current dataset changes")
     
-    # 2. Reorder columns to strictly match your target_headers list
     valid_columns = []
     headers = []
     
     for target in target_headers:
-        # We now look for the EXACT target string, since that is how we saved it in curr_cols_map
         if target in curr_cols_map:
             valid_columns.append(curr_cols_map[target])
             headers.append(target)
             
     ws_changes.append(headers)
     
-    # 3. Find rows starting from row 3 in the CURRENT file
+    # Find rows starting from row 3 in the CURRENT file
     for row in ws_curr.iter_rows(min_row=3):
         is_red_row = False
         
-        # Check for red text ONLY within the valid columns
         for col_idx in valid_columns:
             cell = ws_curr.cell(row=row[0].row, column=col_idx)
             if cell.font and cell.font.color and cell.font.color.type == 'rgb':
@@ -181,7 +214,7 @@ def process_excel(file_prev, file_curr):
                     is_red_row = True
                     break
                     
-        # 4. Extract the valid columns in the new exact order and preserve fonts
+        # Extract the valid columns in the new exact order and preserve fonts
         if is_red_row:
             row_data = []
             cell_fonts = []
@@ -191,10 +224,8 @@ def process_excel(file_prev, file_curr):
                 row_data.append(source_cell.value)
                 cell_fonts.append(copy(source_cell.font) if source_cell.font else None)
                 
-            # Append the data to the new sheet
             ws_changes.append(row_data)
             
-            # Apply the saved fonts to the newly added row
             new_row_idx = ws_changes.max_row
             for i, font in enumerate(cell_fonts):
                 if font:
