@@ -83,10 +83,17 @@ def process_excel(file_prev, file_curr):
     ws_prev = wb_prev["Field Contacts"]
     ws_curr = wb_curr["Field Contacts"]
     
+    # All columns we need to extract from the spreadsheet
     target_headers = [
         "National Store #", "District", "PEOPLE PARTNERS", "LEX Supervisor", 
         "Risk", "Security", "VP", "Operations Officer", "Deployment Lead", 
         "Operations Manager", "Area Supervisor", "PC Ops Name"
+    ]
+    
+    # ONLY the targeted roles that should trigger an "Action Required" log if changed
+    roles_to_track = [
+        "PEOPLE PARTNERS", "LEX Supervisor", "Risk", "Security", "VP", 
+        "Operations Officer", "Deployment Lead", "Operations Manager", "Area Supervisor"
     ]
     
     # 1. Extract Data Dictionaries for Comparison
@@ -121,12 +128,9 @@ def process_excel(file_prev, file_curr):
         pc = prev_data[nsn].get("PC Ops Name", "N/A")
         changes_list.append(["REMOVE", nsn, pc, "National Store #", nsn, "N/A", "Yes"])
         
-    # Check Changed (Value differences AND Red Text flags)
+    # Check Changed (Only checks the specific monitored roles)
     for nsn in common_nsns:
-        for col in target_headers:
-            if col == "National Store #":
-                continue # Skip primary key identifier
-                
+        for col in roles_to_track:
             old_val = prev_data[nsn].get(col, "N/A")
             new_val = curr_data[nsn].get(col, "N/A")
             is_red = col in curr_red_dict.get(nsn, set())
@@ -182,7 +186,6 @@ def process_excel(file_prev, file_curr):
     ws_summary.append(["Action Required Changes"])
     ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
     
-    # Updated Header from 'Store / Role' to 'Change'
     summary_headers = ["Change Type", "National Store #", "PC Ops Name", "Change", "Previous", "New", "Action"]
     ws_summary.append(summary_headers)
     
