@@ -90,7 +90,6 @@ def process_excel(file_prev, file_curr):
     ]
     
     # 1. Extract Data Dictionaries for Comparison
-    # We only need to check formatting on the CURRENT file
     prev_data, _ = get_data_dictionary(ws_prev, target_headers, check_format=False)
     
     curr_result = get_data_dictionary(ws_curr, target_headers, check_format=True)
@@ -115,7 +114,12 @@ def process_excel(file_prev, file_curr):
     # Check Added
     for nsn in added_nsns:
         pc = curr_data[nsn].get("PC Ops Name", "N/A")
-        changes_list.append(["ADD", nsn, pc, "Store", "N/A", "New Store", "Yes"])
+        changes_list.append(["ADD", nsn, pc, "National Store #", "N/A", nsn, "Yes"])
+        
+    # Check Removed
+    for nsn in removed_nsns:
+        pc = prev_data[nsn].get("PC Ops Name", "N/A")
+        changes_list.append(["REMOVE", nsn, pc, "National Store #", nsn, "N/A", "Yes"])
         
     # Check Changed (Value differences AND Red Text flags)
     for nsn in common_nsns:
@@ -130,10 +134,7 @@ def process_excel(file_prev, file_curr):
             # Trigger change log if the value changed OR if the cell is formatted red
             if old_val != new_val or is_red:
                 pc = curr_data[nsn].get("PC Ops Name", "N/A")
-                
-                # Assign a distinct action string if it's purely a formatting flag
                 action = "Yes" if old_val != new_val else "Yes (Red Text)"
-                
                 changes_list.append(["CHANGE", nsn, pc, col, old_val, new_val, action])
 
     # --- CREATE NEW WORKBOOK ---
@@ -152,119 +153,6 @@ def process_excel(file_prev, file_curr):
     ws_summary.cell(row=3, column=1).font = bold_font
     ws_summary.append([f"✅ {len(added_nsns)} New Stores Added"])
     ws_summary.append([f"⚠️ {len(removed_nsns)} Store Removed"])
-    ws_summary.append([f"🔄 {len([c for c in changes_list if c[0] == 'CHANGE'])} Changes Detected"])
-    ws_summary.append([])
     
-    # --- STORE CHANGES (Added/Removed) ---
-    ws_summary.append(["Store Changes"])
-    ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
-    
-    ws_summary.append(["➕ Stores Added"])
-    ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
-    for nsn in added_nsns:
-        pc = curr_data[nsn].get('PC Ops Name', 'N/A')
-        ws_summary.append([f"• NSN {nsn} – PC Ops Name: {pc}"])
-        
-    ws_summary.append([])
-    ws_summary.append(["➖ Stores Removed"])
-    ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
-    for nsn in removed_nsns:
-        pc = prev_data[nsn].get('PC Ops Name', 'N/A')
-        ws_summary.append([f"• NSN {nsn} – PC Ops Name: {pc}"])
-
-    ws_summary.append([])
-    
-    # --- ACTION REQUIRED CHANGES ---
-    ws_summary.append(["Action Required Changes"])
-    ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
-    
-    # Headers updated to match new structure
-    summary_headers = ["Change Type", "NSN", "PC Ops Name", "Store / Role", "Previous", "New", "Action"]
-    ws_summary.append(summary_headers)
-    
-    header_row_idx = ws_summary.max_row
-    for col_num in range(1, len(summary_headers) + 1):
-        ws_summary.cell(row=header_row_idx, column=col_num).font = bold_font
-        ws_summary.cell(row=header_row_idx, column=col_num).fill = PatternFill(start_color="EEEEEE", end_color="EEEEEE", fill_type="solid")
-        
-    for change in changes_list:
-        ws_summary.append(change)
-
-    # TAB 2: CURRENT DATASET CHANGES (Original Red-Text Logic)
-    ws_changes = new_wb.create_sheet("Current dataset changes")
-    
-    valid_columns = []
-    headers = []
-    
-    for target in target_headers:
-        if target in curr_cols_map:
-            valid_columns.append(curr_cols_map[target])
-            headers.append(target)
-            
-    ws_changes.append(headers)
-    
-    # Find rows starting from row 3 in the CURRENT file
-    for row in ws_curr.iter_rows(min_row=3):
-        is_red_row = False
-        
-        for col_idx in valid_columns:
-            cell = ws_curr.cell(row=row[0].row, column=col_idx)
-            if cell.font and cell.font.color and cell.font.color.type == 'rgb':
-                if cell.font.color.rgb in ['FF0000', 'FFFF0000']:
-                    is_red_row = True
-                    break
-                    
-        # Extract the valid columns in the new exact order and preserve fonts
-        if is_red_row:
-            row_data = []
-            cell_fonts = []
-            
-            for col_idx in valid_columns:
-                source_cell = ws_curr.cell(row=row[0].row, column=col_idx)
-                row_data.append(source_cell.value)
-                cell_fonts.append(copy(source_cell.font) if source_cell.font else None)
-                
-            ws_changes.append(row_data)
-            
-            new_row_idx = ws_changes.max_row
-            for i, font in enumerate(cell_fonts):
-                if font:
-                    ws_changes.cell(row=new_row_idx, column=i + 1).font = font
-            
-    # Save the new workbook to an in-memory byte stream
-    output = BytesIO()
-    new_wb.save(output)
-    output.seek(0)
-    
-    return output
-
-# --- Web Interface (Streamlit) ---
-
-st.set_page_config(page_title="Excel Contact Filter & Comparison", page_icon="📊", layout="wide")
-
-st.title("Excel Contact Filter & Comparison")
-st.write("Upload your **Previous** and **Current** McOpCo Alignment spreadsheets. The system will compare the two to generate a Summary of changes, and extract specific columns with **red text** from the current file.")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    file_previous = st.file_uploader("1️⃣ Upload PREVIOUS File (.xlsx)", type=["xlsx"])
-    
-with col2:
-    file_current = st.file_uploader("2️⃣ Upload CURRENT File (.xlsx)", type=["xlsx"])
-
-if file_previous is not None and file_current is not None:
-    if st.button("Generate Comparison & Filter", type="primary"):
-        with st.spinner("Analyzing changes and processing files..."):
-            processed_file_stream = process_excel(file_previous, file_current)
-            
-        if processed_file_stream:
-            st.success("Comparison complete! File processed successfully.")
-            
-            # Download button widget
-            st.download_button(
-                label="📥 Download Output File",
-                data=processed_file_stream,
-                file_name="Filtered_And_Compared_Contacts.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+    # Count only the 'CHANGE' rows for Role Changes highlight
+    num_role_changes = len([c for c in changes_
