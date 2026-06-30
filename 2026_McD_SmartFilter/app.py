@@ -118,18 +118,7 @@ def process_excel(file_prev, file_curr):
     ws_summary.append([f"🔄 {len([c for c in changes_list if c[0] == 'CHANGE'])} Role Changes"])
     ws_summary.append([])
     
-    ws_summary.append(["Action Required Changes"])
-    ws_summary.cell(row=8, column=1).font = bold_font
-    summary_headers = ["Change Type", "NSN", "Profit Center", "Role", "Previous", "New", "Action"]
-    ws_summary.append(summary_headers)
-    for col_num in range(1, len(summary_headers) + 1):
-        ws_summary.cell(row=9, column=col_num).font = bold_font
-        ws_summary.cell(row=9, column=col_num).fill = PatternFill(start_color="EEEEEE", end_color="EEEEEE", fill_type="solid")
-        
-    for change in changes_list:
-        ws_summary.append(change)
-        
-    ws_summary.append([])
+    # --- MOVED: STORE CHANGES (Added/Removed) ---
     ws_summary.append(["Store Changes"])
     ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
     
@@ -137,14 +126,33 @@ def process_excel(file_prev, file_curr):
     ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
     for nsn in added_nsns:
         pc = curr_data[nsn].get('PC Ops Name', 'N/A')
-        ws_summary.append([f"• NSN {nsn} – Profit Center {pc}"])
+        ws_summary.append([f"• NSN {nsn} – PC Ops Name: {pc}"])
         
     ws_summary.append([])
     ws_summary.append(["➖ Stores Removed"])
     ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
     for nsn in removed_nsns:
         pc = prev_data[nsn].get('PC Ops Name', 'N/A')
-        ws_summary.append([f"• NSN {nsn} – Profit Center {pc}"])
+        ws_summary.append([f"• NSN {nsn} – PC Ops Name: {pc}"])
+
+    ws_summary.append([])
+    
+    # --- MOVED: ACTION REQUIRED CHANGES ---
+    ws_summary.append(["Action Required Changes"])
+    ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
+    
+    # Header Updated to "PC Ops Name"
+    summary_headers = ["Change Type", "NSN", "PC Ops Name", "Role", "Previous", "New", "Action"]
+    ws_summary.append(summary_headers)
+    
+    # Style the headers dynamically based on where they landed
+    header_row_idx = ws_summary.max_row
+    for col_num in range(1, len(summary_headers) + 1):
+        ws_summary.cell(row=header_row_idx, column=col_num).font = bold_font
+        ws_summary.cell(row=header_row_idx, column=col_num).fill = PatternFill(start_color="EEEEEE", end_color="EEEEEE", fill_type="solid")
+        
+    for change in changes_list:
+        ws_summary.append(change)
 
     # TAB 2: CURRENT DATASET CHANGES (Original Red-Text Logic)
     ws_changes = new_wb.create_sheet("Current dataset changes")
