@@ -96,6 +96,9 @@ def process_excel(file_prev, file_curr):
         "Operations Officer", "Deployment Lead", "Operations Manager", "Area Supervisor"
     ]
     
+    # Roles that don't require action if the Profit Center remains the same
+    no_action_if_same_pc_roles = ["LEX Supervisor", "Operations Manager", "Area Supervisor"]
+    
     # 1. Extract Data Dictionaries for Comparison
     prev_data, _ = get_data_dictionary(ws_prev, target_headers, check_format=False)
     
@@ -137,9 +140,18 @@ def process_excel(file_prev, file_curr):
             
             # Trigger change log if the value changed OR if the cell is formatted red
             if old_val != new_val or is_red:
-                pc = curr_data[nsn].get("PC Ops Name", "N/A")
+                prev_pc = prev_data[nsn].get("PC Ops Name", "N/A")
+                curr_pc = curr_data[nsn].get("PC Ops Name", "N/A")
+                
+                # Base action flag
                 action = "Yes" if old_val != new_val else "Yes (Red Text)"
-                changes_list.append(["CHANGE", nsn, pc, col, old_val, new_val, action])
+                
+                # Apply Business Rule: No action needed for specific roles if Profit Center is unchanged
+                if col in no_action_if_same_pc_roles:
+                    if prev_pc == curr_pc:
+                        action = "No (same PC)"
+                
+                changes_list.append(["CHANGE", nsn, curr_pc, col, old_val, new_val, action])
 
     # --- CREATE NEW WORKBOOK ---
     new_wb = openpyxl.Workbook()
@@ -197,8 +209,8 @@ def process_excel(file_prev, file_curr):
     for change in changes_list:
         ws_summary.append(change)
 
-    # TAB 2: CURRENT DATASET CHANGES (Original Red-Text Logic)
-    ws_changes = new_wb.create_sheet("Current dataset changes")
+    # TAB 2: FULL DATASET CHANGES (Original Red-Text Logic)
+    ws_changes = new_wb.create_sheet("Full dataset changes")
     
     valid_columns = []
     headers = []
@@ -251,11 +263,12 @@ st.set_page_config(page_title="US McOpCo Roster Changes", page_icon="📊", layo
 
 st.title("US McOpCo Roster Changes")
 st.markdown("""
-Upload your **Previous** and **Current** 'McOpCo Alignment' spreadsheets. 
+Upload your **previous** and **current** 'McOpCo Alignment' spreadsheets. 
 
 The system will compare the two to generate:
-- Summary of changes
-- Extraction of specific columns with **red text** from the current file
+- A **Summary of changes**
+  - *Note:* Role changes for LEX Supervisor, Operations Manager, or Area Supervisor within the same Profit Center will be flagged as "No (same PC)" action required.
+- An extraction of specific columns with **red text** from the current file
 """)
 
 col1, col2 = st.columns(2)
