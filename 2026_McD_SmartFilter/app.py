@@ -155,4 +155,64 @@ def process_excel(file_prev, file_curr):
     ws_summary.append([f"⚠️ {len(removed_nsns)} Store Removed"])
     
     # Count only the 'CHANGE' rows for Role Changes highlight
-    num_role_changes = len([c for c in changes_
+    num_role_changes = len([c for c in changes_list if c[0] == 'CHANGE'])
+    ws_summary.append([f"🔄 {num_role_changes} Changes Detected"])
+    ws_summary.append([])
+    
+    # --- STORE CHANGES (Added/Removed) ---
+    ws_summary.append(["Store Changes"])
+    ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
+    
+    ws_summary.append(["➕ Stores Added"])
+    ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
+    for nsn in added_nsns:
+        pc = curr_data[nsn].get('PC Ops Name', 'N/A')
+        ws_summary.append([f"• National Store # {nsn} – PC Ops Name: {pc}"])
+        
+    ws_summary.append([])
+    ws_summary.append(["➖ Stores Removed"])
+    ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
+    for nsn in removed_nsns:
+        pc = prev_data[nsn].get('PC Ops Name', 'N/A')
+        ws_summary.append([f"• National Store # {nsn} – PC Ops Name: {pc}"])
+
+    ws_summary.append([])
+    
+    # --- ACTION REQUIRED CHANGES ---
+    ws_summary.append(["Action Required Changes"])
+    ws_summary.cell(row=ws_summary.max_row, column=1).font = bold_font
+    
+    # Updated Header from 'Store / Role' to 'Change'
+    summary_headers = ["Change Type", "National Store #", "PC Ops Name", "Change", "Previous", "New", "Action"]
+    ws_summary.append(summary_headers)
+    
+    header_row_idx = ws_summary.max_row
+    for col_num in range(1, len(summary_headers) + 1):
+        ws_summary.cell(row=header_row_idx, column=col_num).font = bold_font
+        ws_summary.cell(row=header_row_idx, column=col_num).fill = PatternFill(start_color="EEEEEE", end_color="EEEEEE", fill_type="solid")
+        
+    for change in changes_list:
+        ws_summary.append(change)
+
+    # TAB 2: CURRENT DATASET CHANGES (Original Red-Text Logic)
+    ws_changes = new_wb.create_sheet("Current dataset changes")
+    
+    valid_columns = []
+    headers = []
+    
+    for target in target_headers:
+        if target in curr_cols_map:
+            valid_columns.append(curr_cols_map[target])
+            headers.append(target)
+            
+    ws_changes.append(headers)
+    
+    # Find rows starting from row 3 in the CURRENT file
+    for row in ws_curr.iter_rows(min_row=3):
+        is_red_row = False
+        
+        for col_idx in valid_columns:
+            cell = ws_curr.cell(row=row[0].row, column=col_idx)
+            if cell.font and cell.font.color and cell.font.color.type == 'rgb':
+                if cell.font.color.rgb in ['FF0000', 'FFFF0000']:
+                    is_
