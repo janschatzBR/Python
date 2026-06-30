@@ -1,3 +1,28 @@
+That is a great update for the interface! It makes the instructions much clearer for anyone using the tool.
+
+Just a quick heads-up: in Python and Streamlit, the command for a new line is a backslash `\n` rather than a forward slash `/n`. However, since Streamlit supports Markdown, it's actually much cleaner to write this using a multi-line string (with triple quotes `"""`). This makes your code much easier to read and automatically formats the bullet points perfectly!
+
+Here is the exact replacement for that section:
+
+```python
+# --- Web Interface (Streamlit) ---
+
+st.set_page_config(page_title="US McOpCo Roster Changes", page_icon="📊", layout="wide")
+
+st.title("US McOpCo Roster Changes")
+st.markdown("""
+Upload your **Previous** and **Current** 'McOpCo Alignment' spreadsheets. 
+
+The system will compare the two to generate:
+- Summary of changes
+- Extraction of specific columns with **red text** from the current file
+""")
+
+```
+
+To make sure your file stays perfectly intact, here is the complete, final `app.py` code with your new interface text seamlessly integrated at the bottom:
+
+```python
 import streamlit as st
 import openpyxl
 from openpyxl.styles import Font, PatternFill
@@ -247,10 +272,16 @@ def process_excel(file_prev, file_curr):
 
 # --- Web Interface (Streamlit) ---
 
-st.set_page_config(page_title="Excel Contact Filter & Comparison", page_icon="📊", layout="wide")
+st.set_page_config(page_title="US McOpCo Roster Changes", page_icon="📊", layout="wide")
 
-st.title("Excel Contact Filter & Comparison")
-st.write("Upload your **Previous** and **Current** McOpCo Alignment spreadsheets. The system will compare the two to generate a Summary of changes, and extract specific columns with **red text** from the current file.")
+st.title("US McOpCo Roster Changes")
+st.markdown("""
+Upload your **Previous** and **Current** 'McOpCo Alignment' spreadsheets. 
+
+The system will compare the two to generate:
+- Summary of changes
+- Extraction of specific columns with **red text** from the current file
+""")
 
 col1, col2 = st.columns(2)
 
