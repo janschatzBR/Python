@@ -215,4 +215,60 @@ def process_excel(file_prev, file_curr):
             cell = ws_curr.cell(row=row[0].row, column=col_idx)
             if cell.font and cell.font.color and cell.font.color.type == 'rgb':
                 if cell.font.color.rgb in ['FF0000', 'FFFF0000']:
-                    is_
+                    is_red_row = True
+                    break
+                    
+        # Extract the valid columns in the new exact order and preserve fonts
+        if is_red_row:
+            row_data = []
+            cell_fonts = []
+            
+            for col_idx in valid_columns:
+                source_cell = ws_curr.cell(row=row[0].row, column=col_idx)
+                row_data.append(source_cell.value)
+                cell_fonts.append(copy(source_cell.font) if source_cell.font else None)
+                
+            ws_changes.append(row_data)
+            
+            new_row_idx = ws_changes.max_row
+            for i, font in enumerate(cell_fonts):
+                if font:
+                    ws_changes.cell(row=new_row_idx, column=i + 1).font = font
+            
+    # Save the new workbook to an in-memory byte stream
+    output = BytesIO()
+    new_wb.save(output)
+    output.seek(0)
+    
+    return output
+
+# --- Web Interface (Streamlit) ---
+
+st.set_page_config(page_title="Excel Contact Filter & Comparison", page_icon="📊", layout="wide")
+
+st.title("Excel Contact Filter & Comparison")
+st.write("Upload your **Previous** and **Current** McOpCo Alignment spreadsheets. The system will compare the two to generate a Summary of changes, and extract specific columns with **red text** from the current file.")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    file_previous = st.file_uploader("1️⃣ Upload PREVIOUS File (.xlsx)", type=["xlsx"])
+    
+with col2:
+    file_current = st.file_uploader("2️⃣ Upload CURRENT File (.xlsx)", type=["xlsx"])
+
+if file_previous is not None and file_current is not None:
+    if st.button("Generate Comparison & Filter", type="primary"):
+        with st.spinner("Analyzing changes and processing files..."):
+            processed_file_stream = process_excel(file_previous, file_current)
+            
+        if processed_file_stream:
+            st.success("Comparison complete! File processed successfully.")
+            
+            # Download button widget
+            st.download_button(
+                label="📥 Download Output File",
+                data=processed_file_stream,
+                file_name="Filtered_And_Compared_Contacts.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
