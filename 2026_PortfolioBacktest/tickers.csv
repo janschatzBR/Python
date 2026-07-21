@@ -1,0 +1,59 @@
+Ticker,Classe,Nome,Moeda,EscalaPreco,EscalaDividendo,Incluir
+AAPL,Acao,Apple,USD,1,1,1
+AEP,Acao,American Electric Power,USD,1,1,1
+BNS,Acao,Bank of Nova Scotia (NYSE),USD,1,1,1
+C,Acao,Citigroup,USD,1,1,1
+LMT,Acao,Lockheed Martin,USD,1,1,1
+CME,Acao,CME Group,USD,1,1,1
+CVX,Acao,Chevron,USD,1,1,1
+EMR,Acao,Emerson Electric,USD,1,1,1
+IBM,Acao,International Business Machines,USD,1,1,1
+JNJ,Acao,Johnson & Johnson,USD,1,1,1
+KO,Acao,Coca-Cola,USD,1,1,1
+MAIN,BDC,Main Street Capital,USD,1,1,1
+MCD,Acao,McDonald's,USD,1,1,1
+META,Acao,Meta Platforms,USD,1,1,1
+MMM,Acao,3M,USD,1,1,1
+MO,Acao,Altria Group,USD,1,1,1
+MSFT,Acao,Microsoft,USD,1,1,1
+NSC,Acao,Norfolk Southern,USD,1,1,1
+PAYX,Acao,Paychex,USD,1,1,1
+PEP,Acao,PepsiCo,USD,1,1,1
+PG,Acao,Procter & Gamble,USD,1,1,1
+RIO,Acao,Rio Tinto ADR (NYSE),USD,1,1,1
+UL,Acao,Unilever ADR (NYSE),USD,1,1,1
+UNP,Acao,Union Pacific,USD,1,1,1
+WHR,Acao,Whirlpool,USD,1,1,1
+WMT,Acao,Walmart,USD,1,1,1
+XOM,Acao,Exxon Mobil,USD,1,1,1
+PLTR,Acao,Palantir Technologies,USD,1,1,1
+ADC,REIT,Agree Realty,USD,1,1,1
+AGNC,REIT,AGNC Investment,USD,1,1,1
+ALX,REIT,Alexander's,USD,1,1,1
+AVB,REIT,AvalonBay Communities,USD,1,1,1
+CCI,REIT,Crown Castle,USD,1,1,1
+CIM,REIT,Chimera Investment,USD,1,1,1
+DLR,REIT,Digital Realty Trust,USD,1,1,1
+EFC,REIT,Ellington Financial,USD,1,1,1
+ELS,REIT,Equity LifeStyle Properties,USD,1,1,1
+EPR,REIT,EPR Properties,USD,1,1,1
+ESS,REIT,Essex Property Trust,USD,1,1,1
+FRT,REIT,Federal Realty Investment Trust,USD,1,1,1
+GOOD,REIT,Gladstone Commercial,USD,1,1,1
+IIPR,REIT,Innovative Industrial Properties,USD,1,1,1
+IRM,REIT,Iron Mountain,USD,1,1,1
+IVR,REIT,Invesco Mortgage Capital,USD,1,1,1
+LTC,REIT,LTC Properties,USD,1,1,1
+O,REIT,Realty Income,USD,1,1,1
+SLG,REIT,SL Green Realty,USD,1,1,1
+SPG,REIT,Simon Property Group,USD,1,1,1
+STAG,REIT,STAG Industrial,USD,1,1,1
+UHT,REIT,Universal Health Realty Income Trust,USD,1,1,1
+VICI,REIT,VICI Properties,USD,1,1,1
+VNO,REIT,Vornado Realty Trust,USD,1,1,1
+WELL,REIT,Welltower,USD,1,1,1
+WPC,REIT,W. P. Carey,USD,1,1,1
+VWCE.DE,ETF,Vanguard FTSE All-World UCITS ETF Acc (Xetra),EUR,1,1,1
+VHYL.L,ETF,Vanguard FTSE All-World High Dividend Yield UCITS ETF Dist (LSE),GBP,1,1,1
+BTC-USD,Cripto,Bitcoin,USD,1,1,1
+ETH-USD,Cripto,Ethereum,USD,1,1,1

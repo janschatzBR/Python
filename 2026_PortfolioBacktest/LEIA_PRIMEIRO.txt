@@ -1,0 +1,17 @@
+CARTEIRABACKTEST — COMO USAR
+
+WINDOWS:
+1) Descompacte o ZIP.
+2) Dê dois cliques em executar_windows.bat.
+3) Aguarde.
+4) O resultado ficará em output\historico_carteira.xlsx.
+
+MAC/LINUX:
+1) Abra o Terminal na pasta.
+2) Execute: chmod +x executar_mac_linux.sh
+3) Execute: ./executar_mac_linux.sh
+
+Depois, envie historico_carteira.xlsx para o ChatGPT.
+
+O pacote contém 58 ativos: SPCX foi excluído; VICI, VWCE.DE, VHYL.L,
+BTC-USD e ETH-USD estão incluídos.
